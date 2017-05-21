@@ -123,17 +123,19 @@ $0010: MIN_CVT_TEMP (2 bytes)
 $0012: MAX_CVT_TEMP (2 bytes)
 $0014: MIN_AMB_TEMP (2 bytes)
 $0016: MAX_AMB_TEMP (2 bytes)
-	Scaling: 1 bit = 0.005 °C
-	(RAW value (signed) - 32767) / 200 = signed °C value
+	Scaling: 1 bit = 0.01 °C
+	(RAW value (signed) - 32767) / 100 = signed °C value
 
-	$0000 = -163.835 °C <- MIN value
+	$0000 = -327.67 °C <- MIN value
 	...
-	$705F = -020.000 °C
-	$7FFE = -000.005 °C
-	$7FFF =  000.000 °C
-	$8000 =  000.005 °C
+	$705F = -040.00 °C
+	$7FFE = -000.01 °C
+	$7FFF =  000.00 °C
+	$8000 =  000.01 °C
+	$A16F =  085.60 °C
+	$BC57 =  154.48 °C
 	...
-	$FFFF =  163.840 °C <- MAX value
+	$FFFF =  327.68 °C <- MAX value
 
 
 $0018-$00FF: RESERVED
@@ -207,8 +209,8 @@ Example:
 
 OFFSET	|	0	1	2	3	4	5	6	7	8	9	A	B	C	D	E	F
 --------------------------------------------------------------------------
-$0000	|	03	AB	34	E6	00	00	FE	CD	62	D7	AB	0F	72	D0	CC	A4
-$0010	|	81	4F	9C	D1	73	19	9E	13	00	00	00	00	00	00	00	00
+$0000	|	03	AB	34	E6	00	00	FE	CD	62	D7	AB	0F	7A	D0	C5	A4
+$0010	|	81	4F	9C	D1	7A	10	8C	82	00	00	00	00	00	00	00	00
 $0020	|	00	00	00	00	00	00	00	00	00	00	00	00	00	00	00	00
 $0030	|	00	00	00	00	00	00	00	00	00	00	00	00	00	00	00	00
 ...		|
@@ -231,12 +233,12 @@ ODOMETER:			$03AB34E6	->  61551846 / 8000			=  7693.980750 km
 TRIPMETER:			$0000FECD	->  65229 / 8000			=     8.153625 km
 MAX_SPEED:			$62D7		->  25303 / 400				=    63.2575 km/h
 MAX_RPM:			$AB0F		->  43791 / 4				= 10947.75 rpm
-MIN_CHT_TEMP:		$72D0		-> (29392 - 32767) / 200	=   -16.875 °C
-MAX_CHT_TEMP:		$CCA4		-> (52388 - 32767) / 200	=    98.105 °C
-MIN_CVT_TEMP:		$814F		-> (33103 - 32767) / 200	=     1.680 °C
-MAX_CVT_TEMP:		$9CD1		-> (40145 - 32767) / 200	=    36.890 °C
-MIN_AMB_TEMP:		$7319		-> (29465 - 32767) / 200	=   -16.510 °C		
-MAX_AMB_TEMP:		$9E13		-> (40467 - 32767) / 200	=    38.500 °C
+MIN_CHT_TEMP:		$7AD0		-> (31440 - 32767) / 100	=   -13.27 °C
+MAX_CHT_TEMP:		$C5A4		-> (50596 - 32767) / 100	=   178.29 °C
+MIN_CVT_TEMP:		$814F		-> (33103 - 32767) / 100	=     3.36 °C
+MAX_CVT_TEMP:		$9CD1		-> (40145 - 32767) / 100	=    73.78 °C
+MIN_AMB_TEMP:		$7A10		-> (31248 - 32767) / 100	=   -15.19 °C		
+MAX_AMB_TEMP:		$8C82		-> (35970 - 32767) / 100	=    32.03 °C
 -------------------------------------------------------------------------------
 
 
@@ -245,9 +247,9 @@ CONSTANTS ($0100 - $01FF):
 -------------------------------------------------------------------------------
 OFFSET:				VALUE:			SCALING:					RESULT:
 -------------------------------------------------------------------------------
-REAR_TIRE_CIRC:		$794A		->  31050 / 20				=  1552.5 mm
-REAR_TIRE_DIAM:		$9A6E		->  39534 / 80				=   494.175 mm
-FINAL_DRIVE_GEARS:	$0D340D2C	->  p1 = 13, p2 = 52, 
+REAR_TIRE_CIRC:		$794A		->	31050 / 20				=  1552.5 mm
+REAR_TIRE_DIAM:		$9A6E		->	39534 / 80				=   494.175 mm
+FINAL_DRIVE_GEARS:	$0D340D2C	->	p1 = 13, p2 = 52, 
 									s1 = 13, s2 = 44		= tooth numbers
 FINAL_DRIVE_RATIO:	$A544		->	42308 / 3125			=     1:13.53856
 
@@ -271,8 +273,8 @@ const uint16_t MIN_AMBIENT_TEMP_OFFSET	= 0x0014;
 const uint16_t MAX_AMBIENT_TEMP_OFFSET	= 0x0016;
 const uint16_t REAR_TIRE_CIRC_OFFSET	= 0x0100;
 const uint16_t REAR_TIRE_DIAM_OFFSET	= 0x0102;
-const uint32_t FINAL_DRIVE_GEARS_OFFSET = 0x0104;
-const uint16_t FINAL_DRIVE_RATIO_OFFSET = 0x0108;
+const uint32_t FINAL_DRIVE_GEARS_OFFSET	= 0x0104;
+const uint16_t FINAL_DRIVE_RATIO_OFFSET	= 0x0108;
 
 // Variables
 // Interrupt controlled global variables (changing really fast)
@@ -315,7 +317,7 @@ int main(void)
 	// Load stored values from EEPROM into SRAM
 	// Wait until the internal EEPROM is available to read...
 	eeprom_busy_wait();
-
+	
 	// ...then begin reading last saved values
 	odometer			= eeprom_read_dword(&ODOMETER_OFFSET);
 	tripmeter			= eeprom_read_dword(&TRIPMETER_OFFSET);
@@ -334,9 +336,9 @@ int main(void)
 	
 	// Enter infinite loop
 	for (;;) 
-    {
+	{
 		// Magic goes here...
-    }
+	}
 
 	return 0;
 }
